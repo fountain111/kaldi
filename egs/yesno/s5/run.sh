@@ -19,11 +19,14 @@ rm -rf data exp mfcc
 
 local/prepare_data.sh waves_yesno
 local/prepare_dict.sh
+#最后输出的目录是data/lang ，这部分主要是完成fst的格式
 utils/prepare_lang.sh --position-dependent-phones false data/local/dict "<SIL>" data/local/lang data/lang
+
+# 语言模型，包括fst的输出
 local/prepare_lm.sh
 
 # Feature extraction
-for x in train_yesno test_yesno; do 
+for x in train_yesno test_yesno; do
  steps/make_mfcc.sh --nj 1 data/$x exp/make_mfcc/$x mfcc
  steps/compute_cmvn_stats.sh data/$x exp/make_mfcc/$x mfcc
  utils/fix_data_dir.sh data/$x
