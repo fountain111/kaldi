@@ -8,7 +8,9 @@ H=`pwd`  #exp home
 n=8      #parallel jobs
 
 #corpus and trans directory
-thchs=/nfs/public/materials/data/thchs30-openslr
+#thchs=/nfs/public/materials/data/thchs30-openslr
+data_dir=~/data/data_thchs30
+work_dir=~/project/kaldi/egs/thchs30
 
 #you can obtain the database by uncommting the following lines
 #[ -d $thchs ] || mkdir -p $thchs  || exit 1
@@ -19,7 +21,9 @@ thchs=/nfs/public/materials/data/thchs30-openslr
 
 #data preparation
 #generate text, wav.scp, utt2pk, spk2utt
-local/thchs-30_data_prep.sh $H $thchs/data_thchs30 || exit 1;
+#local/thchs-30_data_prep.sh $H $thchs/data_thchs30 || exit 1;
+# ||表示返回false 执行 exit 1
+local/thchs-30_data_prep.sh $work_dir/s5  $data_dir/data_thchs30 || exit 1;
 
 #produce MFCC features
 rm -rf data/mfcc && mkdir -p data/mfcc &&  cp -R data/{train,dev,test,test_phone} data/mfcc || exit 1;
@@ -33,31 +37,36 @@ done
 cp data/mfcc/test/feats.scp data/mfcc/test_phone && cp data/mfcc/test/cmvn.scp data/mfcc/test_phone || exit 1;
 
 
+
 #prepare language stuff
 #build a large lexicon that invovles words in both the training and decoding.
 (
   echo "make word graph ..."
+  echo $
   cd $H; mkdir -p data/{dict,lang,graph} && \
-  cp $thchs/resource/dict/{extra_questions.txt,nonsilence_phones.txt,optional_silence.txt,silence_phones.txt} data/dict && \
-  cat $thchs/resource/dict/lexicon.txt $thchs/data_thchs30/lm_word/lexicon.txt | \
-  grep -v '<s>' | grep -v '</s>' | sort -u > data/dict/lexicon.txt || exit 1;
+  cp $data_dir/resource/dict/{extra_questions.txt,nonsilence_phones.txt,optional_silence.txt,silence_phones.txt} data/dict && \ #resource里的dict拷贝出来
+  cat $data_dir/resource/dict/lexicon.txt $data_dir/data_thchs30/lm_word/lexicon.txt | \
+  grep -v '<s>' | grep -v '</s>' | sort -u > data/dict/lexicon.txt || exit 1;  # 合并拷入lexicon.txt
+  # --position_dependent_phones false： 是否将phone拆成更详细的部分，若选择true，则将在phone后面根据音素所处的位置加上 _B, _I, _E, _S
   utils/prepare_lang.sh --position_dependent_phones false data/dict "<SPOKEN_NOISE>" data/local/lang data/lang || exit 1;
-  gzip -c $thchs/data_thchs30/lm_word/word.3gram.lm > data/graph/word.3gram.lm.gz || exit 1;
-  utils/format_lm.sh data/lang data/graph/word.3gram.lm.gz $thchs/data_thchs30/lm_word/lexicon.txt data/graph/lang || exit 1;
+  gzip -c $data_dir/data_thchs30/lm_word/word.3gram.lm > data/graph/word.3gram.lm.gz || exit 1;
+  utils/format_lm.sh data/lang data/graph/word.3gram.lm.gz $data_dir/data_thchs30/lm_word/lexicon.txt data/graph/lang || exit 1;
 )
 
 #make_phone_graph
 (
   echo "make phone graph ..."
   cd $H; mkdir -p data/{dict_phone,graph_phone,lang_phone} && \
-  cp $thchs/resource/dict/{extra_questions.txt,nonsilence_phones.txt,optional_silence.txt,silence_phones.txt} data/dict_phone  && \
-  cat $thchs/data_thchs30/lm_phone/lexicon.txt | grep -v '<eps>' | sort -u > data/dict_phone/lexicon.txt  && \
+  cp $data_dir/resource/dict/{extra_questions.txt,nonsilence_phones.txt,optional_silence.txt,silence_phones.txt} data/dict_phone  && \
+  cat $data_dir/data_thchs30/lm_phone/lexicon.txt | grep -v '<eps>' | sort -u > data/dict_phone/lexicon.txt  && \
   echo "<SPOKEN_NOISE> sil " >> data/dict_phone/lexicon.txt  || exit 1;
   utils/prepare_lang.sh --position_dependent_phones false data/dict_phone "<SPOKEN_NOISE>" data/local/lang_phone data/lang_phone || exit 1;
-  gzip -c $thchs/data_thchs30/lm_phone/phone.3gram.lm > data/graph_phone/phone.3gram.lm.gz  || exit 1;
-  utils/format_lm.sh data/lang_phone data/graph_phone/phone.3gram.lm.gz $thchs/data_thchs30/lm_phone/lexicon.txt \
+  gzip -c $data_dir/data_thchs30/lm_phone/phone.3gram.lm > data/graph_phone/phone.3gram.lm.gz  || exit 1;
+  utils/format_lm.sh data/lang_phone data/graph_phone/phone.3gram.lm.gz $data_dir/data_thchs30/lm_phone/lexicon.txt \
     data/graph_phone/lang  || exit 1;
 )
+
+echo "done"
 
 #monophone
 steps/train_mono.sh --boost-silence 1.25 --nj $n --cmd "$train_cmd" data/mfcc/train data/lang exp/mono || exit 1;

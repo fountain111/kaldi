@@ -19,7 +19,11 @@ rm -rf data exp mfcc
 
 local/prepare_data.sh waves_yesno
 local/prepare_dict.sh
+
+#====
 #最后输出的目录是data/lang ，这部分主要是完成fst的格式
+# 从data/local/dict里读入lexicon.txt，如果lexicop.txt概率存在，一般情况下就用带概率的,
+#====
 utils/prepare_lang.sh --position-dependent-phones false data/local/dict "<SIL>" data/local/lang data/lang
 
 # 语言模型，包括fst的输出
