@@ -75,7 +75,7 @@ echo "$0 $@"  # Print the command line for logging
 
 . utils/parse_options.sh
 
-if [ $# -ne 4 ]; then
+if [ $# -ne 4 ]; then  # $#代表参数个数
   echo "Usage: utils/prepare_lang.sh <dict-src-dir> <oov-dict-entry> <tmp-dir> <lang-dir>"
   echo "e.g.: utils/prepare_lang.sh data/local/dict <SPOKEN_NOISE> data/local/lang data/lang"
   echo "<dict-src-dir> should contain the following files:"
@@ -107,8 +107,13 @@ fi
 srcdir=$1
 oov_word=$2
 tmpdir=$3
-dir=$4
+dir=$4 #dst dir
 
+echo "para"
+echo $1
+echo $2
+echo $3
+echo $4
 
 if [ -d $dir/phones ]; then
   rm -r $dir/phones
@@ -116,34 +121,41 @@ fi
 mkdir -p $dir $tmpdir $dir/phones
 
 silprob=false
-[ -f $srcdir/lexiconp_silprob.txt ] && silprob=true
+[ -f $srcdir/lexiconp_silprob.txt ] && silprob=true  # 如果存在lexiconp_silprob.txt 则true
+
+echo "silprob"
+echo $silprob
 
 [ -f path.sh ] && . ./path.sh
 
 ! utils/validate_dict_dir.pl $srcdir && \
-  echo "*Error validating directory $srcdir*" && exit 1;
+  echo "*Error validating directory $srcdir*" && exit 1;  #验证srcdir
 
 if [[ ! -f $srcdir/lexicon.txt ]]; then
   echo "**Creating $srcdir/lexicon.txt from $srcdir/lexiconp.txt"
-  perl -ape 's/(\S+\s+)\S+\s+(.+)/$1$2/;' < $srcdir/lexiconp.txt > $srcdir/lexicon.txt || exit 1;
+  perl -ape 's/(\S+\s+)\S+\s+(.+)/$1$2/;' < $srcdir/lexiconp.txt > $srcdir/lexicon.txt || exit 1;  #如果没有lexicon，用lexicop去替代
 fi
 if [[ ! -f $srcdir/lexiconp.txt ]]; then
   echo "**Creating $srcdir/lexiconp.txt from $srcdir/lexicon.txt"
-  perl -ape 's/(\S+\s+)(.+)/${1}1.0\t$2/;' < $srcdir/lexicon.txt > $srcdir/lexiconp.txt || exit 1;
+  perl -ape 's/(\S+\s+)(.+)/${1}1.0\t$2/;' < $srcdir/lexicon.txt > $srcdir/lexiconp.txt || exit 1;  #如果p,那么用p
 fi
 
-if [ ! -z "$unk_fst" ] && [ ! -f "$unk_fst" ]; then
+echo "unk_fst"
+echo $unk_fst
+echo "unk_fst"
+
+if [ ! -z "$unk_fst" ] && [ ! -f "$unk_fst" ]; then #如果fst存在 则退出
   echo "$0: expected --unk-fst $unk_fst to exist as a file"
   exit 1
 fi
 
-if ! utils/validate_dict_dir.pl $srcdir >&/dev/null; then
+if ! utils/validate_dict_dir.pl $srcdir >&/dev/null; then  #也是在验证，不知道验证啥
   utils/validate_dict_dir.pl $srcdir  # show the output.
   echo "Validation failed (second time)"
   exit 1;
 fi
 
-# phones.txt file provided, we will do some sanity check here.
+# phones.txt file provided, we will do some sanity check here.  #又开始检查phones.txt,一般这里不执行，
 if [[ ! -z $phone_symbol_table ]]; then
   # Checks if we have position dependent phones
   n1=`cat $phone_symbol_table | grep -v -E "^#[0-9]+$" | cut -d' ' -f1 | sort -u | wc -l`
@@ -169,6 +181,7 @@ if [ ! -z "$extra_word_disambig_syms" ]; then
   fi
 fi
 
+#如果设置了dependent_phone，会产生phone_map
 if $position_dependent_phones; then
   # Create $tmpdir/lexiconp.txt from $srcdir/lexiconp.txt (or
   # $tmpdir/lexiconp_silprob.txt from $srcdir/lexiconp_silprob.txt) by
@@ -188,6 +201,8 @@ if $position_dependent_phones; then
          for($n=1;$n<@A-1;$n++) { print "$A[$n]_I "; } print "$A[$n]_E\n"; } ' \
          < $srcdir/lexiconp.txt > $tmpdir/lexiconp.txt || exit 1;
   fi
+
+
 
   # create $tmpdir/phone_map.txt
   # this has the format (on each line)
@@ -220,7 +235,7 @@ fi
 
 
 # Sets of phones for use in clustering, and making monophone systems.
-
+#静音共享高斯
 if $share_silence_phones; then
   # build a roots file that will force all the silence phones to share the
   # same pdf's. [three distinct states, only the transitions will differ.]
@@ -244,13 +259,20 @@ else
   cat $dir/phones/sets.txt | awk '{print "shared", "split", $0;}' > $dir/phones/roots.txt
 fi
 
+#开始正式拷贝到lang下面了
+#静音拷贝
 cat $srcdir/silence_phones.txt | utils/apply_map.pl $tmpdir/phone_map.txt | \
   awk '{for(n=1;n<=NF;n++) print $n;}' > $dir/phones/silence.txt
+
+#非静音音素拷贝
 cat $srcdir/nonsilence_phones.txt | utils/apply_map.pl $tmpdir/phone_map.txt | \
   awk '{for(n=1;n<=NF;n++) print $n;}' > $dir/phones/nonsilence.txt
 cp $srcdir/optional_silence.txt $dir/phones/optional_silence.txt
+
+#这个不清楚拷贝为什么要改个名字，似乎是上下文无关的意思
 cp $dir/phones/silence.txt $dir/phones/context_indep.txt
 
+#以下都市extra_question 为了HMM决策树用的
 # if extra_questions.txt is empty, it's OK.
 cat $srcdir/extra_questions.txt 2>/dev/null | utils/apply_map.pl $tmpdir/phone_map.txt \
   >$dir/phones/extra_questions.txt
@@ -267,6 +289,7 @@ if $position_dependent_phones; then
   done
 fi
 
+#消除歧义，
 # add_lex_disambig.pl is responsible for adding disambiguation symbols to
 # the lexicon, for telling us how many disambiguation symbols it used,
 # and and also for modifying the unknown-word's pronunciation (if the
@@ -314,6 +337,7 @@ if [ ! -z "$extra_word_disambig_syms" ]; then
   cat $extra_word_disambig_syms | awk '{ print $1 }' >> $dir/phones/disambig.txt
 fi
 
+#音素和数字对应
 # Create phone symbol table.
 if [[ ! -z $phone_symbol_table ]]; then
   start_symbol=`grep \#0 $phone_symbol_table | awk '{print $2}'`
@@ -337,6 +361,7 @@ else
   [ -f $srcdir/word_boundary.txt ] && cp $srcdir/word_boundary.txt $dir/phones/word_boundary.txt
 fi
 
+# word和数字对应
 # Create word symbol table.
 # <s> and </s> are only needed due to the need to rescore lattices with
 # ConstArpaLm format language model. They do not normally appear in G.fst or
