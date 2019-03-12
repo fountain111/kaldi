@@ -27,8 +27,12 @@ delta_opts= # can be used to add extra options to add-deltas
 
 echo "$0 $@"  # Print the command line for logging
 
+
 if [ -f path.sh ]; then . ./path.sh; fi
 . parse_options.sh || exit 1;
+
+
+
 
 if [ $# != 3 ]; then
   echo "Usage: steps/train_mono.sh [options] <data-dir> <lang-dir> <exp-dir>"
@@ -45,6 +49,7 @@ lang=$2
 dir=$3
 
 oov_sym=`cat $lang/oov.int` || exit 1;
+echo $PWD
 
 mkdir -p $dir/log
 echo $nj > $dir/num_jobs
@@ -68,7 +73,7 @@ shared_phones_opt="--shared-phones=$lang/phones/sets.int"
 if [ $stage -le -3 ]; then
   # Note: JOB=1 just uses the 1st part of the features-- we only need a subset anyway.
   if ! feat_dim=`feat-to-dim "$example_feats" - 2>/dev/null` || [ -z $feat_dim ]; then
-    feat-to-dim "$example_feats" -
+    feat-to-dim "$example_feats" - #输出特征维度
     echo "error getting feature dimension"
     exit 1;
   fi
@@ -80,6 +85,7 @@ fi
 numgauss=`gmm-info --print-args=false $dir/0.mdl | grep gaussians | awk '{print $NF}'`
 incgauss=$[($totgauss-$numgauss)/$max_iter_inc] # per-iter increment for #Gauss
 
+#fsts.job.gz中
 if [ $stage -le -2 ]; then
   echo "$0: Compiling training graphs"
   $cmd JOB=1:$nj $dir/log/compile_graphs.JOB.log \

@@ -20,7 +20,7 @@ parallel_opts=  # ignored now.
 scoring_opts=
 # note: there are no more min-lmwt and max-lmwt options, instead use
 # e.g. --scoring-opts "--min-lmwt 1 --max-lmwt 20"
-skip_scoring=false
+skip_scoring=True
 decode_extra_opts=
 # End configuration section.
 
