@@ -6,6 +6,9 @@
 # see ../run.sh for example
 
 # Begin configuration section.
+
+
+
 nj=4
 cmd=run.pl
 mfcc_config=conf/mfcc.conf
@@ -13,10 +16,23 @@ compress=true
 write_utt2num_frames=false  # if true writes utt2num_frames
 # End configuration section.
 
+
+
 echo "$0 $@"  # Print the command line for logging
+
+
 
 if [ -f path.sh ]; then . ./path.sh; fi
 . parse_options.sh || exit 1;
+#parse 之后，参数变成sh,目录1,目录2,目录3
+echo $0
+
+echo $1
+
+echo $2
+
+echo $3
+
 
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
    echo "Usage: $0 [options] <data-dir> [<log-dir> [<mfcc-dir>] ]";
@@ -31,6 +47,9 @@ if [ $# -lt 1 ] || [ $# -gt 3 ]; then
 fi
 
 data=$1
+
+
+
 if [ $# -ge 2 ]; then
   logdir=$2
 else
@@ -42,8 +61,11 @@ else
   mfccdir=$data/data
 fi
 
-# make $mfccdir an absolute pathname.
+# make $mfccdir an absolute pathname. 如#/home/gg/project/kaldi/egs/thchs30/s5/mfcc/train
 mfccdir=`perl -e '($dir,$pwd)= @ARGV; if($dir!~m:^/:) { $dir = "$pwd/$dir"; } print $dir; ' $mfccdir ${PWD}`
+
+
+
 
 # use "name" as part of name of the archive.
 name=`basename $data`
@@ -79,6 +101,7 @@ else
   vtln_opts=""
 fi
 
+#创建ARK
 for n in $(seq $nj); do
   # the next command does nothing unless $mfccdir/storage/ exists, see
   # utils/create_data_link.pl for more info.
