@@ -13,6 +13,10 @@ mono=false
 . ./path.sh ## Source the tools/utils (import the queue.pl)
 
 . utils/parse_options.sh || exit 1;
+
+echo "para"
+echo $1
+
 decoder=$1
 srcdir=$2
 datadir=$3

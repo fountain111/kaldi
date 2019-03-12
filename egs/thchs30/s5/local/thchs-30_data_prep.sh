@@ -21,7 +21,8 @@ mkdir -p data/{train,dev,test}
 # 1:文件名标签，比如D04_777 对应一个具体文件。 wav.scp
 # 2：音素标签，比如D04_777 对应一整句音素(有声调) phone.txt
 # 3：sp2kutt ,人声对文件
-# 4 : 汉字对应文件，word.txt ，txt和word一样
+# 4 : 汉字对应文件，word.txt ，txt和word一样.
+# 5:存放在train,dev,test下
 #====
 
 #create wav.scp, utt2spk.scp, spk2utt.scp, text
@@ -60,6 +61,8 @@ utils/utt2spk_to_spk2utt.pl data/train/utt2spk > data/train/spk2utt
 utils/utt2spk_to_spk2utt.pl data/dev/utt2spk > data/dev/spk2utt
 utils/utt2spk_to_spk2utt.pl data/test/utt2spk > data/test/spk2utt
 
+
+# 注意这里的txt是和Phone.txt一样，为了测试用
 echo "creating test_phone for phone decoding"
 (
   rm -rf data/test_phone && cp -R data/test data/test_phone  || exit 1

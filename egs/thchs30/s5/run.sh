@@ -5,7 +5,8 @@
 . ./path.sh
 
 H=`pwd`  #exp home
-n=8      #parallel jobs
+n=2      #parallel jobs
+
 
 #corpus and trans directory
 #thchs=/nfs/public/materials/data/thchs30-openslr
@@ -25,7 +26,7 @@ work_dir=~/project/kaldi/egs/thchs30
 # ||表示返回false 执行 exit 1
 local/thchs-30_data_prep.sh $work_dir/s5  $data_dir/data_thchs30 || exit 1;
 
-#produce MFCC features
+#produce MFCC features 然后特征变换成均值0,方差1,即cmvn
 rm -rf data/mfcc && mkdir -p data/mfcc &&  cp -R data/{train,dev,test,test_phone} data/mfcc || exit 1;
 for x in train dev test; do
    #make  mfcc
@@ -38,6 +39,7 @@ cp data/mfcc/test/feats.scp data/mfcc/test_phone && cp data/mfcc/test/cmvn.scp d
 
 
 
+#特征处理完毕之后，开始构造图
 #prepare language stuff
 #build a large lexicon that invovles words in both the training and decoding.
 (
@@ -46,7 +48,7 @@ cp data/mfcc/test/feats.scp data/mfcc/test_phone && cp data/mfcc/test/cmvn.scp d
   cd $H; mkdir -p data/{dict,lang,graph} && \
   cp $data_dir/resource/dict/{extra_questions.txt,nonsilence_phones.txt,optional_silence.txt,silence_phones.txt} data/dict && \ #resource里的dict拷贝出来
   cat $data_dir/resource/dict/lexicon.txt $data_dir/data_thchs30/lm_word/lexicon.txt | \
-  grep -v '<s>' | grep -v '</s>' | sort -u > data/dict/lexicon.txt || exit 1;  # 合并拷入lexicon.txt
+  grep -v '<s>' | grep -v '</s>' | sort -u > data/dict/lexicon.txt || exit 1;  # 合并拷入lexicon.txt ,可能还加了去重，最后合成一个全的词典
   # --position_dependent_phones false： 是否将phone拆成更详细的部分，若选择true，则将在phone后面根据音素所处的位置加上 _B, _I, _E, _S
   utils/prepare_lang.sh --position_dependent_phones false data/dict "<SPOKEN_NOISE>" data/local/lang data/lang || exit 1;
   gzip -c $data_dir/data_thchs30/lm_word/word.3gram.lm > data/graph/word.3gram.lm.gz || exit 1;
