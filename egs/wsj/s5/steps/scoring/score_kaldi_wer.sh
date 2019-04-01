@@ -3,6 +3,7 @@
 # Apache 2.0
 
 # See the script steps/scoring/score_kaldi_cer.sh in case you need to evalutate CER
+#local/score.sh --cmd "$cmd" $scoring_opts $data $graphdir $dir
 
 [ -f ./path.sh ] && . ./path.sh
 
@@ -37,9 +38,13 @@ data=$1
 lang_or_graph=$2
 dir=$3
 
+#word对应数字的标识符号文件，
 symtab=$lang_or_graph/words.txt
 
+
+#检查文件是否存在
 for f in $symtab $dir/lat.1.gz $data/text; do
+  echo $f
   [ ! -f $f ] && echo "score.sh: no such file $f" && exit 1;
 done
 
@@ -57,12 +62,13 @@ if $decode_mbr ; then
 else
   echo "$0: scoring with word insertion penalty=$word_ins_penalty"
 fi
-
-
+echo "test"
 mkdir -p $dir/scoring_kaldi
+#  把text的内容通过filtering cmd转换成二进制送入test_fil.txt中
+#echo "$data/text | $ref_filtering_cmd "
 cat $data/text | $ref_filtering_cmd > $dir/scoring_kaldi/test_filt.txt || exit 1;
 if [ $stage -le 0 ]; then
-
+  echo "score.sh stage 0"
   for wip in $(echo $word_ins_penalty | sed 's/,/ /g'); do
     mkdir -p $dir/scoring_kaldi/penalty_$wip/log
 
@@ -94,7 +100,8 @@ if [ $stage -le 0 ]; then
   done
 fi
 
-
+echo "lmwt"
+echo $LMWT
 
 if [ $stage -le 1 ]; then
 

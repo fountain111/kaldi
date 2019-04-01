@@ -17,6 +17,7 @@ mono=false
 echo "para"
 echo $1
 
+# 1是step/decode.sh,2是exp/mono,3是data/mfcc
 decoder=$1
 srcdir=$2
 datadir=$3
@@ -27,9 +28,14 @@ if [ $mono = true ];then
   opt="--mono"
 fi
 
-#decode word
+#decode word，先做图，
 utils/mkgraph.sh $opt data/graph/lang $srcdir $srcdir/graph_word  || exit 1;
+
+
+#解码
 $decoder --cmd "$decode_cmd" --nj $nj $srcdir/graph_word $datadir/test $srcdir/decode_test_word || exit 1
+
+
 
 #decode phone
 utils/mkgraph.sh $opt data/graph_phone/lang $srcdir $srcdir/graph_phone  || exit 1;

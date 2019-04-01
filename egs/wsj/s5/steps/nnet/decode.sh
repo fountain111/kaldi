@@ -103,9 +103,11 @@ delta_opts=
 D=$srcdir
 [ -e $D/norm_vars ] && cmvn_opts="--norm-means=true --norm-vars=$(cat $D/norm_vars)" # Bwd-compatibility,
 [ -e $D/cmvn_opts ] && cmvn_opts=$(cat $D/cmvn_opts)
+
 [ -e $D/delta_order ] && delta_opts="--delta-order=$(cat $D/delta_order)" # Bwd-compatibility,
 [ -e $D/delta_opts ] && delta_opts=$(cat $D/delta_opts)
 #
+
 # Create the feature stream,
 feats="ark,s,cs:copy-feats scp:$sdata/JOB/feats.scp ark:- |"
 # apply-cmvn (optional),
@@ -118,6 +120,7 @@ feats="ark,s,cs:copy-feats scp:$sdata/JOB/feats.scp ark:- |"
 
 # add-ivector (optional),
 if [ -e $D/ivector_dim ]; then
+  echo "ivector"
   [ -z $ivector ] && echo "Missing --ivector, they were used in training!" && exit 1
   # Get the tool,
   ivector_append_tool=append-vector-to-feats # default,
@@ -136,6 +139,8 @@ fi
 
 # select a block from blocksoftmax,
 if [ ! -z "$blocksoftmax_dims" ]; then
+  echo "blocksoftmax"
+
   # blocksoftmax_active is a csl! dim1,dim2,dim3,...
   [ -z "$blocksoftmax_active" ] && echo "$0 Missing option --blocksoftmax-active N" && exit 1
   # getting dims,
@@ -151,12 +156,30 @@ fi
 
 # Run the decoding in the queue,
 if [ $stage -le 0 ]; then
+  echo "stage 0 "
+  echo "$nnet"
+  echo "$feats"
+  echo "$nnet_forward_opts"
+  echo "$feature_transform"
+  echo "$class_frame_counts"
+  echo "$nnet"
+  echo "$num_threads"
+  echo "$thread_string"
+  #feats="ark,s,cs:copy-feats scp:data/fbank/train/split1/1/feats.scp ark:- | apply-cmvn --norm-means=true --norm-vars=false \
+  #--utt2spk=ark:data/fbank/train/split1/1/utt2spk scp:data/fbank/train/split1/1/cmvn.scp ark:- ark:- |"
+
+  #nnet-forward $nnet_forward_opts --feature-transform=$feature_transform --class-frame-counts=$class_frame_counts --use-gpu=$use_gpu "$nnet" "$feats" ark,t:-|head
+
   $cmd --num-threads $((num_threads+1)) JOB=1:$nj $dir/log/decode.JOB.log \
-    nnet-forward $nnet_forward_opts --feature-transform=$feature_transform --class-frame-counts=$class_frame_counts --use-gpu=$use_gpu "$nnet" "$feats" ark:- \| \
-    latgen-faster-mapped$thread_string --min-active=$min_active --max-active=$max_active --max-mem=$max_mem --beam=$beam \
-    --lattice-beam=$lattice_beam --acoustic-scale=$acwt --allow-partial=true --word-symbol-table=$graphdir/words.txt \
-    $model $graphdir/HCLG.fst ark:- "ark:|gzip -c > $dir/lat.JOB.gz" || exit 1;
+  nnet-forward $nnet_forward_opts --feature-transform=$feature_transform --class-frame-counts=$class_frame_counts --use-gpu=$use_gpu "$nnet" "$feats" ark:- \| \
+  latgen-faster-mapped$thread_string --min-active=$min_active --max-active=$max_active --max-mem=$max_mem --beam=$beam \
+  --lattice-beam=$lattice_beam --acoustic-scale=$acwt --allow-partial=true --word-symbol-table=$graphdir/words.txt \
+  $model $graphdir/HCLG.fst ark:- "ark:|gzip -c > $dir/lat.JOB.gz"  || exit 1;
+    #nnet-forward  --feature-transform=$feature_transform "$nnet" "$feats" ark:- \| \
+    #latgen-faster-mapped$thread_string --word-symbol-table=$graphdir/words.txt \
+    #$model $graphdir/HCLG.fst ark:- "ark:|gzip -c > $dir/lat.JOB.gz"   || exit 1;
 fi
+
 
 # Run the scoring
 if ! $skip_scoring ; then

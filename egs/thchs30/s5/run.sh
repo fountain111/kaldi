@@ -5,7 +5,7 @@
 . ./path.sh
 
 H=`pwd`  #exp home
-n=2      #parallel jobs
+n=4      #parallel jobs
 
 
 #corpus and trans directory

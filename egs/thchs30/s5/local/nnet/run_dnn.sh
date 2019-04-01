@@ -9,6 +9,7 @@
            ## This relates to the queue.
 
 . ./path.sh ## Source the tools/utils (import the queue.pl)
+#local/nnet/run_dnn.sh --stage 0 --nj $n  exp/tri4b exp/tri4b_ali exp/tri4b_ali_cv || exit 1;
 
 stage=0
 nj=8

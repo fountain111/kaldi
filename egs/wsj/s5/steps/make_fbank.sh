@@ -29,6 +29,8 @@ if [ $# -lt 1 ] || [ $# -gt 3 ]; then
    echo "  --write-utt2num-frames <true|false>     # If true, write utt2num_frames file."
    exit 1;
 fi
+#steps/make_fbank.sh --nj 8 --cmd run.pl data/fbank/train exp/make_fbank/train fbank/train
+
 
 data=$1
 if [ $# -ge 2 ]; then
@@ -85,8 +87,9 @@ for n in $(seq $nj); do
   utils/create_data_link.pl $fbankdir/raw_fbank_$name.$n.ark
 done
 
+
 if $write_utt2num_frames; then
-  write_num_frames_opt="--write-num-frames=ark,t:$logdir/utt2num_frames.JOB"
+  c="--write-num-frames=ark,t:$logdir/utt2num_frames.JOB"
 else
   write_num_frames_opt=
 fi

@@ -1,3 +1,7 @@
+
+#local/thchs-30_decode.sh --mono true --nj $n "steps/decode.sh" exp/mono data/mfcc &  #最后一个&表示后台工作
+#$decoder --cmd "$decode_cmd" --nj $nj $srcdir/graph_word $datadir/test $srcdir/decode_test_word || exit 1
+
 #!/bin/bash
 
 # Copyright 2012  Johns Hopkins University (Author: Daniel Povey)
@@ -20,11 +24,11 @@ parallel_opts=  # ignored now.
 scoring_opts=
 # note: there are no more min-lmwt and max-lmwt options, instead use
 # e.g. --scoring-opts "--min-lmwt 1 --max-lmwt 20"
-skip_scoring=True
+skip_scoring=false
 decode_extra_opts=
 # End configuration section.
 
-echo "$0 $@"  # Print the command line for logging
+echo "$0 $@"  # Print the command line for logging  #0是当前脚本文件，@是所有参数
 
 [ -f ./path.sh ] && . ./path.sh; # source the path.
 . parse_options.sh || exit 1;
@@ -53,22 +57,30 @@ if [ $# != 3 ]; then
    exit 1;
 fi
 
+#$decoder --cmd "$decode_cmd" --nj $nj $srcdir/graph_word $datadir/test $srcdir/decode_test_word
 
 graphdir=$1
-data=$2
-dir=$3
-srcdir=`dirname $dir`; # The model directory is one level up from decoding directory.
-sdata=$data/split$nj;
+data=$2 #数据
+dir=$3 #大部分内容是log输出目录
+srcdir=`dirname $dir`; # The model directory is one level up from decoding directory. #返回的上一级不带/的目录
+
+
+
+
+#这个地方如果能不改就尽量不要改，尽量把在做数据集的时候使用data/split/nj这种标准格式。
+sdata=$data/split$nj; #具体数据路径
 
 mkdir -p $dir/log
-[[ -d $sdata && $data/feats.scp -ot $sdata ]] || split_data.sh $data $nj || exit 1;
+[[ -d $sdata && $data/feats.scp -ot $sdata ]] || split_data.sh $data $nj || exit 1;  #两个[[]]可以在里面使用&&等逻辑语法,
 echo $nj > $dir/num_jobs
 
+#如果model为空的话，检查iter,如果iter也为空，指定finall.mdl为model
 if [ -z "$model" ]; then # if --model <mdl> was not specified on the command line...
   if [ -z $iter ]; then model=$srcdir/final.mdl;
   else model=$srcdir/$iter.mdl; fi
 fi
 
+#final.alimdl模型应该是对齐用的，
 if [ $(basename $model) != final.alimdl ] ; then
   # Do not use the $srcpath -- look at the path where the model is
   if [ -f $(dirname $model)/final.alimdl ] && [ -z "$transform_dir" ]; then
@@ -79,10 +91,12 @@ if [ $(basename $model) != final.alimdl ] ; then
   fi
 fi
 
+# 检查文件是否存在 ，feats,cmvn,hclg.
 for f in $sdata/1/feats.scp $sdata/1/cmvn.scp $model $graphdir/HCLG.fst; do
   [ ! -f $f ] && echo "$0: Error: no such file $f" && exit 1;
 done
 
+#如果检查到final.mat存在，设置fea为lda
 if [ -f $srcdir/final.mat ]; then feat_type=lda; else feat_type=delta; fi
 echo "decode.sh: feature type is $feat_type";
 
@@ -93,11 +107,16 @@ delta_opts=`cat $srcdir/delta_opts 2>/dev/null`
 thread_string=
 [ $num_threads -gt 1 ] && thread_string="-parallel --num-threads=$num_threads"
 
+#根据不同的feat类型 apply
 case $feat_type in
   delta) feats="ark,s,cs:apply-cmvn $cmvn_opts --utt2spk=ark:$sdata/JOB/utt2spk scp:$sdata/JOB/cmvn.scp scp:$sdata/JOB/feats.scp ark:- | add-deltas $delta_opts ark:- ark:- |";;
   lda) feats="ark,s,cs:apply-cmvn $cmvn_opts --utt2spk=ark:$sdata/JOB/utt2spk scp:$sdata/JOB/cmvn.scp scp:$sdata/JOB/feats.scp ark:- | splice-feats $splice_opts ark:- ark:- | transform-feats $srcdir/final.mat ark:- ark:- |";;
   *) echo "$0: Error: Invalid feature type $feat_type" && exit 1;
 esac
+
+
+#FMLLR的特征 最大似然线性回归。
+
 if [ ! -z "$transform_dir" ]; then # add transforms to features...
   echo "Using fMLLR transforms from $transform_dir"
   [ ! -f $transform_dir/trans.1 ] && echo "Expected $transform_dir/trans.1 to exist."
@@ -117,6 +136,7 @@ if [ ! -z "$transform_dir" ]; then # add transforms to features...
 fi
 
 if [ $stage -le 0 ]; then
+  echo "stage less 0"
   if [ -f "$graphdir/num_pdfs" ]; then
     [ "`cat $graphdir/num_pdfs`" -eq `am-info --print-args=false $model | grep pdfs | awk '{print $NF}'` ] || \
       { echo "$0: Error: Mismatch in number of pdfs with $model"; exit 1; }
@@ -128,6 +148,8 @@ if [ $stage -le 0 ]; then
 fi
 
 if [ $stage -le 1 ]; then
+   echo "stage less 1"
+
   [ ! -z $iter ] && iter_opt="--iter $iter"
   steps/diagnostic/analyze_lats.sh --cmd "$cmd" $iter_opt $graphdir $dir
 fi
